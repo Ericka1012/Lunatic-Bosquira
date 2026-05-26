@@ -160,7 +160,7 @@ body{font-family:var(--fb);background:var(--off);color:var(--black);min-height:1
         <div class="av">BS</div>
         <div>
           <div class="hero-name">Bosquira</div>
-          <div class="hero-sub">Alimentos / F&B · Ecuador</div>
+          <div class="hero-sub">Inmobiliaria · Ecuador</div>
           <div class="hero-pills"><span class="hpill">Community Management</span><span class="hpill">Meta Ads</span></div>
         </div>
       </div>
@@ -268,6 +268,27 @@ body{font-family:var(--fb);background:var(--off);color:var(--black);min-height:1
       <div class="kcard k3"><div class="kcard-label">WhatsApp</div><div class="kcard-num" id="lk-wsp">-</div><div class="kcard-row"><span style="font-size:11px;color:var(--g400);">mensajes directos</span></div></div>
       <div class="kcard" style="border:1.5px solid var(--g100);"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--up),#03f7ec);border-radius:16px 16px 0 0;"></div><div class="kcard-label">CRM Sperant</div><div class="kcard-num" id="lk-crm">-</div><div class="kcard-row"><span style="font-size:11px;color:var(--g400);">avanzaron al CRM</span></div></div>
     </div>
+    <div id="leads-charts-wrap" style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px;">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div class="chart-title">Tendencia de leads por semana</div>
+          <div class="chart-sub">Meta · Web · WhatsApp</div>
+          <div class="legend">
+            <div class="leg"><div class="leg-sq" style="background:#5240eb"></div>Meta</div>
+            <div class="leg"><div class="leg-sq" style="background:#03f7ec"></div>Web</div>
+            <div class="leg"><div class="leg-sq" style="background:#f990f8"></div>WhatsApp</div>
+          </div>
+        </div>
+        <div style="position:relative;height:200px;"><canvas id="c-leads-trend"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head">
+          <div class="chart-title">Distribucion de fuentes</div>
+          <div class="chart-sub">% del total de leads</div>
+        </div>
+        <div style="position:relative;height:200px;"><canvas id="c-leads-dist"></canvas></div>
+      </div>
+    </div>
     <div style="background:var(--white);border-radius:16px;border:1.5px solid var(--g100);overflow:hidden;margin-bottom:16px;">
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--g100);">
         <div class="hist-title">Detalle por semana</div>
@@ -338,6 +359,50 @@ function renderLeads(){
   rows.push(`<tr style="background:var(--off);font-family:var(--fh);font-weight:700;"><td>Total</td><td></td><td>${FMT(totMeta)}</td><td>${FMT(totWeb)}</td><td>${FMT(totWsp)}</td><td>${FMT(totAll)}</td><td><span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:rgba(0,200,122,0.1);color:var(--up);">${totCrm}</span></td></tr>`);
   document.getElementById('leads-tbody').innerHTML=rows.join('');
   document.getElementById('leads-sync-note').textContent='Datos en vivo desde Google Sheets · '+new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+  const chartsWrap=document.getElementById('leads-charts-wrap');
+  if(chartsWrap)chartsWrap.style.display=LEADS_FILTER==='todos'?'none':'grid';
+
+  /* Gráfica tendencia */
+  const ltEl=document.getElementById('c-leads-trend');
+  if(ltEl){
+    if(window._LTC)window._LTC.destroy();
+    window._LTC=new Chart(ltEl,{
+      type:'bar',
+      data:{
+        labels:data.map(r=>r.semana.length>10?r.semana.substring(0,10)+'…':r.semana),
+        datasets:[
+          {label:'Meta',data:data.map(r=>r.meta),backgroundColor:'rgba(82,64,235,0.8)',borderRadius:4,borderSkipped:false},
+          {label:'Web',data:data.map(r=>r.web),backgroundColor:'rgba(3,247,236,0.8)',borderRadius:4,borderSkipped:false},
+          {label:'WhatsApp',data:data.map(r=>r.wsp),backgroundColor:'rgba(249,144,248,0.8)',borderRadius:4,borderSkipped:false}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{
+          x:{ticks:{font:{size:9},color:'#a0a09c',maxRotation:30},grid:{display:false},stacked:true},
+          y:{ticks:{font:{size:10},color:'#a0a09c',stepSize:10},grid:{color:'rgba(0,0,0,0.04)'},beginAtZero:true,border:{display:false},stacked:true}
+        }
+      }
+    });
+  }
+
+  /* Gráfica distribución donut */
+  const ldEl=document.getElementById('c-leads-dist');
+  if(ldEl){
+    if(window._LDC)window._LDC.destroy();
+    window._LDC=new Chart(ldEl,{
+      type:'doughnut',
+      data:{
+        labels:['Meta','Web','WhatsApp'],
+        datasets:[{data:[totMeta,totWeb,totWsp],backgroundColor:['#5240eb','#03f7ec','#f990f8'],borderWidth:0,hoverOffset:6}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+        plugins:{
+          legend:{display:true,position:'bottom',labels:{font:{size:10},color:'#6a6a66',boxWidth:8,padding:10}},
+          tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} (${totAll?Math.round(ctx.parsed/totAll*100):0}%)`}}
+        }
+      }
+    });
+  }
 }
 
 let POSTEOS=[],pvi=0,PC,PT;
@@ -355,8 +420,9 @@ function switchTab(tab){
   document.getElementById('month-nav').style.display=tab==='metricas'&&MESES.length?'flex':'none';
   document.getElementById('post-month-nav').style.display=tab==='posteos'&&POSTEOS.length?'flex':'none';
   document.getElementById('pdf-btn').style.display=tab==='metricas'?'flex':'none';
-  const mes=tab==='metricas'?MESES[vi]?.mes:tab==='posteos'?POSTEOS[pvi]?.mes:'2026';
-  document.getElementById('hero-period').innerHTML=(mes||'—')+' <span>2026</span>';
+  const mes=tab==='metricas'?MESES[vi]?.mes:tab==='posteos'?POSTEOS[pvi]?.mes:null;
+  if(mes)document.getElementById('hero-period').innerHTML=mes+' <span>2026</span>';
+  else document.getElementById('hero-period').innerHTML='Leads <span>2026</span>';
   if(tab==='leads')renderLeads();
 }
 async function fetchAll(){
