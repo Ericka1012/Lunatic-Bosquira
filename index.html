@@ -254,19 +254,17 @@ body{font-family:var(--fb);background:var(--off);color:var(--black);min-height:1
   <!-- LEADS -->
   <div id="tab-content-leads" style="display:none;">
     <div class="month-nav" style="display:flex;margin-bottom:16px;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span class="mnav-label">Filtrar por mes:</span>
+      <span class="mnav-label">Filtrar:</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap;" id="leads-filter-pills">
-        <button class="mpill active" onclick="filterLeads('todos',this)">Todos</button>
-        <button class="mpill" onclick="filterLeads('Marzo',this)">Marzo</button>
-        <button class="mpill" onclick="filterLeads('Abril',this)">Abril</button>
-        <button class="mpill" onclick="filterLeads('Mayo',this)">Mayo</button>
+        <button class="mpill active" onclick="filterLeads('todos',this)">Todos los meses</button>
       </div>
     </div>
-    <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);">
       <div class="kcard k1"><div class="kcard-label">Meta Ads</div><div class="kcard-num" id="lk-meta">-</div><div class="kcard-row"><span style="font-size:11px;color:var(--g400);">leads de Instagram</span></div></div>
       <div class="kcard k2"><div class="kcard-label">Web</div><div class="kcard-num" id="lk-web">-</div><div class="kcard-row"><span style="font-size:11px;color:var(--g400);">formulario web</span></div></div>
       <div class="kcard k3"><div class="kcard-label">WhatsApp</div><div class="kcard-num" id="lk-wsp">-</div><div class="kcard-row"><span style="font-size:11px;color:var(--g400);">mensajes directos</span></div></div>
-      <div class="kcard" style="border:1.5px solid var(--g100);"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--up),#03f7ec);border-radius:16px 16px 0 0;"></div><div class="kcard-label">CRM Sperant</div><div class="kcard-num" id="lk-crm">-</div><div class="kcard-row"><span style="font-size:11px;color:var(--g400);">avanzaron al CRM</span></div></div>
+      <div class="kcard" style="border:1.5px solid var(--g100);position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--up),#03f7ec);border-radius:16px 16px 0 0;"></div><div class="kcard-label">CRM Sperant</div><div class="kcard-num" id="lk-crm">-</div><div class="kcard-row"><span style="font-size:11px;color:var(--g400);">avanzaron al CRM</span></div></div>
+      <div class="kcard" style="border:1.5px solid var(--g100);position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f990f8,#5240eb);border-radius:16px 16px 0 0;"></div><div class="kcard-label">Ventas</div><div class="kcard-num" id="lk-ventas">-</div><div class="kcard-row"><span style="font-size:11px;color:var(--g400);">cierres del mes</span></div></div>
     </div>
     <div id="leads-charts-wrap" style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px;">
       <div class="chart-card">
@@ -295,7 +293,7 @@ body{font-family:var(--fb);background:var(--off);color:var(--black);min-height:1
         <div class="hist-sub" id="leads-table-sub">—</div>
       </div>
       <table class="hist-table">
-        <thead><tr><th>Semana</th><th>Mes</th><th>Meta</th><th>Web</th><th>WSP</th><th>Total</th><th>CRM</th></tr></thead>
+        <thead><tr><th>Mes</th><th>Meta</th><th>Web</th><th>WSP</th><th>Total leads</th><th>CRM</th><th>Ventas</th></tr></thead>
         <tbody id="leads-tbody"></tbody>
       </table>
       <div style="font-size:10px;color:var(--g400);padding:10px 18px;border-top:0.5px solid var(--g100);" id="leads-sync-note"></div>
@@ -330,8 +328,8 @@ async function fetchLeads(){
     const json=await res.json();
     LEADS_DATA=json.map(row=>{
       const fk=k=>Object.keys(row).find(h=>h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(k));
-      return{semana:String(row[fk('semana')]||'').trim(),mes:String(row[fk('mes')]||'').trim(),meta:Number(row[fk('meta')])||0,web:Number(row[fk('web')])||0,wsp:Number(row[fk('wsp')])||0,crm:Number(row[fk('crm')])||0};
-    }).filter(r=>r.semana);
+      return{mes:String(row[fk('mes')]||'').trim(),meta:Number(row[fk('meta')])||0,web:Number(row[fk('web')])||0,wsp:Number(row[fk('wsp')])||0,crm:Number(row[fk('crm')])||0,ventas:Number(row[fk('venta')])||0};
+    }).filter(r=>r.mes);
   }catch(e){}
 }
 
@@ -348,17 +346,27 @@ function renderLeads(){
   const totWeb=data.reduce((a,r)=>a+r.web,0);
   const totWsp=data.reduce((a,r)=>a+r.wsp,0);
   const totCrm=data.reduce((a,r)=>a+r.crm,0);
+  const totVentas=data.reduce((a,r)=>a+(r.ventas||0),0);
   const totAll=totMeta+totWeb+totWsp;
   document.getElementById('lk-meta').textContent=FMT(totMeta);
   document.getElementById('lk-web').textContent=FMT(totWeb);
   document.getElementById('lk-wsp').textContent=FMT(totWsp);
   document.getElementById('lk-crm').textContent=FMT(totCrm);
-  const label=LEADS_FILTER==='todos'?data.length+' semanas · total '+FMT(totAll)+' leads':LEADS_FILTER+' · '+data.length+' semanas · '+FMT(totAll)+' leads';
+  document.getElementById('lk-ventas').textContent=FMT(totVentas);
+  const label=LEADS_FILTER==='todos'?data.length+' meses · total '+FMT(totAll)+' leads':LEADS_FILTER+' · '+FMT(totAll)+' leads';
   document.getElementById('leads-table-sub').textContent=label;
-  const rows=data.map(r=>{const tot=r.meta+r.web+r.wsp;return`<tr><td style="font-weight:500;">${r.semana}</td><td style="font-size:11px;color:var(--g600);font-weight:400;">${r.mes}</td><td>${FMT(r.meta)}</td><td>${FMT(r.web)}</td><td>${FMT(r.wsp)}</td><td>${FMT(tot)}</td><td>${r.crm>0?'<span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:rgba(0,200,122,0.1);color:var(--up);">'+r.crm+'</span>':'—'}</td></tr>`;});
-  rows.push(`<tr style="background:var(--off);font-family:var(--fh);font-weight:700;"><td>Total</td><td></td><td>${FMT(totMeta)}</td><td>${FMT(totWeb)}</td><td>${FMT(totWsp)}</td><td>${FMT(totAll)}</td><td><span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:rgba(0,200,122,0.1);color:var(--up);">${totCrm}</span></td></tr>`);
+  const badge=v=>v>0?`<span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:rgba(0,200,122,0.1);color:var(--up);">${v}</span>`:'—';
+  const ventaBadge=v=>v>0?`<span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:rgba(249,144,248,0.15);color:#9333ea;">${v}</span>`:'—';
+  const rows=data.map(r=>{const tot=r.meta+r.web+r.wsp;return`<tr><td style="font-weight:500;">${r.mes}</td><td>${FMT(r.meta)}</td><td>${FMT(r.web)}</td><td>${FMT(r.wsp)}</td><td>${FMT(tot)}</td><td>${badge(r.crm)}</td><td>${ventaBadge(r.ventas||0)}</td></tr>`;});
+  rows.push(`<tr style="background:var(--off);font-family:var(--fh);font-weight:700;"><td>Total</td><td>${FMT(totMeta)}</td><td>${FMT(totWeb)}</td><td>${FMT(totWsp)}</td><td>${FMT(totAll)}</td><td>${badge(totCrm)}</td><td>${ventaBadge(totVentas)}</td></tr>`);
   document.getElementById('leads-tbody').innerHTML=rows.join('');
   document.getElementById('leads-sync-note').textContent='Datos en vivo desde Google Sheets · '+new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+  /* Pills dinámicos según meses disponibles */
+  const pills=document.getElementById('leads-filter-pills');
+  if(pills&&LEADS_DATA.length){
+    const meses=[...new Set(LEADS_DATA.map(r=>r.mes))];
+    pills.innerHTML='<button class="mpill'+(LEADS_FILTER==='todos'?' active':'')+'" onclick="filterLeads('todos',this)">Todos</button>'+meses.map(m=>`<button class="mpill${LEADS_FILTER===m?' active':''}" onclick="filterLeads('${m}',this)">${m}</button>`).join('');
+  }
   const chartsWrap=document.getElementById('leads-charts-wrap');
   if(chartsWrap)chartsWrap.style.display=LEADS_FILTER==='todos'?'none':'grid';
 
